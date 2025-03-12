@@ -1,16 +1,23 @@
+function addClickListener(element, callback) {
+    if (element) {
+        element.addEventListener('click', callback);
+    } else {
+        console.warn('Element not found for click listener:', element);
+    }
+}
 document.addEventListener('DOMContentLoaded', () => {
-    const startButton = getElement('start-button');
-    const restartButton = getElement('restart-button');
-    const nextLevelButton = getElement('next-level-button');
-    const saveScoreButton = getElement('save-score-button');
-    const playAgainButton = getElement('play-again-button');
-    const clearHighscoresButton = getElement('clear-highscores-button');
-    const easterEggCloseButton = getElement('easter-egg-close');
-    const playerNameInput = getElement('player-name');
+    const startButton = document.getElementById('start-button');
+    const restartButton = document.getElementById('restart-button');
+    const nextLevelButton = document.getElementById('next-level-button');
+    const saveScoreButton = document.getElementById('save-score-button');
+    const playAgainButton = document.getElementById('play-again-button');
+    const clearHighscoresButton = document.getElementById('clear-highscores-button');
+    const easterEggCloseButton = document.getElementById('easter-egg-close');
+    const playerNameInput = document.getElementById('player-name');
     // Add new buttons for touch controls
-    const toggleLightButton = getElement('toggle-light-button');
-    const flashlightButton = getElement('flashlight-button');
-    const easterEggButton = getElement('easter-egg-button');
+    const toggleLightButton = document.getElementById('toggle-light-button');
+    const flashlightButton = document.getElementById('flashlight-button');
+    const easterEggButton = document.getElementById('easter-egg-button');
 
     if (playerNameInput) {
         playerNameInput.addEventListener('keydown', e => e.stopPropagation());
@@ -26,9 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     addClickListener(startButton, () => {
-        const titleScreen = getElement('title-screen');
-        const uiOverlay = getElement('ui-overlay');
-        const instructions = getElement('instructions');
+        const titleScreen = document.getElementById('title-screen');
+        const uiOverlay = document.getElementById('ui-overlay');
+        const instructions = document.getElementById('instructions');
 
         if (titleScreen) titleScreen.classList.add('hidden');
         if (uiOverlay) uiOverlay.classList.remove('hidden');
@@ -44,14 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     addClickListener(restartButton, () => {
-        const messageOverlay = getElement('message-overlay');
+        const messageOverlay = document.getElementById('message-overlay');
         if (messageOverlay) messageOverlay.classList.add('hidden');
         if (restartButton) restartButton.classList.add('hidden');
         startNewGame();
     });
 
     addClickListener(nextLevelButton, () => {
-        const messageOverlay = getElement('message-overlay');
+        const messageOverlay = document.getElementById('message-overlay');
         if (messageOverlay) messageOverlay.classList.add('hidden');
         if (nextLevelButton) nextLevelButton.classList.add('hidden');
 
@@ -61,8 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     addClickListener(saveScoreButton, () => {
-        const nameInput = getElement('player-name');
-        const nameInputContainer = getElement('name-input-container');
+        const nameInput = document.getElementById('player-name');
+        const nameInputContainer = document.getElementById('name-input-container');
 
         if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
             const playerName = (nameInput && nameInput.value) ? nameInput.value.trim() : "Okänd spelare";
@@ -82,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     addClickListener(playAgainButton, () => {
-        const highscoreScreen = getElement('highscore-screen');
+        const highscoreScreen = document.getElementById('highscore-screen');
         if (highscoreScreen) highscoreScreen.classList.add('hidden');
         startNewGame();
     });
@@ -100,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     addClickListener(easterEggCloseButton, () => {
-        const easterEgg = getElement('easter-egg');
+        const easterEgg = document.getElementById('easter-egg');
         if (easterEgg) easterEgg.classList.add('hidden');
 
         if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
@@ -157,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     createStars();
     createParticles();
 
-    const titleScreen = getElement('title-screen');
+    const titleScreen = document.getElementById('title-screen');
     if (titleScreen) {
         titleScreen.addEventListener('mousemove', handleMouseMove);
     }
