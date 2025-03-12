@@ -8,110 +8,6 @@ if (!window.virtualKeys) {
     };
 }
 
-// Add touch controls styles directly to avoid external CSS file reference
-(function() {
-    const style = document.createElement('style');
-    style.textContent = `
-        /* Touch controls styles */
-        .touch-button {
-            position: fixed;
-            padding: 15px 25px;
-            background: rgba(20, 40, 80, 0.7);
-            color: white;
-            border: 2px solid rgba(100, 200, 255, 0.6);
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 1001;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-            transition: all 0.2s ease;
-        }
-        
-        .touch-button:active, .touch-button.active {
-            background-color: rgba(100, 200, 255, 0.7);
-            box-shadow: 0 0 20px rgba(100, 200, 255, 0.8);
-            transform: scale(1.1);
-        }
-        
-        .virtual-joystick {
-            position: absolute;
-            width: 120px;
-            height: 120px;
-            background-color: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 50%;
-            z-index: 1001;
-            box-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
-            touch-action: none;
-        }
-        
-        .virtual-joystick-inner {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(100, 200, 255, 0.8) 100%);
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-        
-        .touch-indicator {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 9999;
-            opacity: 0;
-            transition: opacity 0.3s, transform 0.3s;
-        }
-        
-        /* Updated positioning for mobile buttons */
-        #toggle-light-button {
-            bottom: 80px;
-            left: 20px;
-        }
-        
-        #flashlight-button {
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        
-        #flashlight-button:active, #flashlight-button.active {
-            transform: translateX(-50%) scale(1.1);
-        }
-        
-        #easter-egg-button {
-            bottom: 80px;
-            right: 20px;
-        }
-        
-        /* Adjust for smaller screens */
-        @media (max-width: 768px) {
-            .touch-button {
-                padding: 12px 20px;
-                font-size: 14px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .touch-button {
-                padding: 10px 16px;
-                font-size: 12px;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    console.log("Touch controls styles added directly");
-})();
-
 // Set up touch controls when the document is loaded
 document.addEventListener('DOMContentLoaded', () => {
     // Small delay to ensure all DOM elements are properly rendered
@@ -270,33 +166,53 @@ function setupTouchControls() {
         }
     }
     
-    // Reposition UI buttons
+    // Reposition buttons to avoid stamina bar overlap
     repositionTouchButtons();
 }
 
-// Function to reposition touch buttons based on screen size
+// Function to reposition touch buttons
 function repositionTouchButtons() {
     // Get touch buttons
     const toggleLightButton = document.getElementById('toggle-light-button');
     const flashlightButton = document.getElementById('flashlight-button');
     const easterEggButton = document.getElementById('easter-egg-button');
     
+    // Get the UI overlay and stamina container to calculate safe positions
+    const uiOverlay = document.getElementById('ui-overlay');
+    const staminaContainer = document.querySelector('.stamina-container');
+    
+    // Calculate a safe bottom position (150px is usually safe)
+    let safeBottomPosition = '150px';
+    
+    // If we can detect the stamina container, position buttons well below it
+    if (uiOverlay && staminaContainer) {
+        const uiRect = uiOverlay.getBoundingClientRect();
+        safeBottomPosition = (window.innerHeight - uiRect.bottom - 20) + 'px';
+        
+        // Ensure minimum safe distance
+        if (parseInt(safeBottomPosition) < 150) {
+            safeBottomPosition = '150px';
+        }
+    }
+    
     // Apply new positions if buttons exist
     if (toggleLightButton) {
-        toggleLightButton.style.bottom = '80px';
+        toggleLightButton.style.bottom = safeBottomPosition;
         toggleLightButton.style.left = '20px';
     }
     
     if (flashlightButton) {
-        flashlightButton.style.bottom = '80px';
+        flashlightButton.style.bottom = safeBottomPosition;
         flashlightButton.style.left = '50%';
         flashlightButton.style.transform = 'translateX(-50%)';
     }
     
     if (easterEggButton) {
-        easterEggButton.style.bottom = '80px';
+        easterEggButton.style.bottom = safeBottomPosition;
         easterEggButton.style.right = '20px';
     }
+    
+    console.log("Touch buttons repositioned, bottom set to: " + safeBottomPosition);
 }
 
 // Window resize event handler
@@ -307,17 +223,33 @@ window.getVirtualKeys = function() {
     return window.virtualKeys;
 };
 
-// Debug function to check if touch controls are working
-window.debugTouchControls = function() {
-    console.log("Current virtual keys state:", window.virtualKeys);
+// Make sure touch buttons are correctly positioned when game UI is shown
+document.addEventListener('DOMContentLoaded', function() {
+    // Listen for changes to the UI overlay's visibility
+    const uiOverlay = document.getElementById('ui-overlay');
+    if (uiOverlay) {
+        // Setup a MutationObserver to detect when the UI becomes visible
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    if (!uiOverlay.classList.contains('hidden')) {
+                        // UI overlay is now visible, reposition buttons
+                        setTimeout(repositionTouchButtons, 100);
+                    }
+                }
+            });
+        });
+        
+        observer.observe(uiOverlay, { attributes: true });
+    }
     
-    // Test setting values
-    window.virtualKeys.up = true;
-    console.log("After setting up=true:", window.virtualKeys);
-    
-    // Reset after 1 second
-    setTimeout(() => {
-        window.virtualKeys.up = false;
-        console.log("After 1s reset:", window.virtualKeys);
-    }, 1000);
-};
+    // Also try to reposition after game has started
+    const startButton = document.getElementById('start-button');
+    if (startButton) {
+        startButton.addEventListener('click', function() {
+            setTimeout(repositionTouchButtons, 500);
+            setTimeout(repositionTouchButtons, 1000);
+            setTimeout(repositionTouchButtons, 2000);
+        });
+    }
+});

@@ -229,7 +229,7 @@ class Enemy {
             player.x + player.radius, player.y + player.radius
         );
         
-        // Kontrollera om fienden är inom ljusradien - ÄNDRINGAR HÄR
+        // Kontrollera om fienden är inom ljusradien
         const isInLight = distanceToPlayer <= player.lightRadius && player.lightProperties.isOn;
         
         // Uppdatera huvudposition
@@ -240,14 +240,12 @@ class Enemy {
         this.eyesContainer.setPosition(spriteX, spriteY);
         this.stunEffect.setPosition(this.x, this.y);
         
-        // Ändrad synlighetslogik: fiender syns alltid, men är tydligare i ljuset
-        // VIKTIGT: alltid minst 0.3 i alpha så fienden alltid syns något
-        const baseVisibility = 0.3;
-        const enhancedVisibility = isInLight ? 1.0 : baseVisibility;
+        // Ändrad synlighetslogik: fiender är helt osynliga utanför ljuset
+        const visibility = isInLight ? 1.0 : 0.0;
         
-        this.sprite.setAlpha(enhancedVisibility);
-        this.eyesContainer.setAlpha(enhancedVisibility);
-        this.stunEffect.setAlpha(this.stunned ? 0.5 * enhancedVisibility : 0);
+        this.sprite.setAlpha(visibility);
+        this.eyesContainer.setAlpha(visibility);
+        this.stunEffect.setAlpha(this.stunned ? 0.5 * visibility : 0);
         
         // Uppdatera färg baserat på skjutförberedelse
         const preparingColor = this.preparingToShoot ? 

@@ -1,6 +1,116 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ljus & Mörker: Utforskningsspel</title>
+        
+        <!-- Add this script before any stylesheet links -->
+        <script>
+            // Directly add touch controls CSS
+            (function() {
+                const style = document.createElement('style');
+                style.id = 'touch-controls-style';
+                style.textContent = `
+                    /* Touch controls styles */
+                    .touch-button {
+                        position: fixed;
+                        padding: 15px 25px;
+                        background: rgba(20, 40, 80, 0.7);
+                        color: white;
+                        border: 2px solid rgba(100, 200, 255, 0.6);
+                        border-radius: 50px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        z-index: 1001;
+                        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+                        transition: all 0.2s ease;
+                    }
+                    
+                    .touch-button:active, .touch-button.active {
+                        background-color: rgba(100, 200, 255, 0.7);
+                        box-shadow: 0 0 20px rgba(100, 200, 255, 0.8);
+                        transform: scale(1.1);
+                    }
+                    
+                    /* Add other touch control styles as needed */
+                    
+                    /* Virtual joystick styles */
+                    .virtual-joystick {
+                        position: absolute;
+                        width: 120px;
+                        height: 120px;
+                        background-color: rgba(255, 255, 255, 0.2);
+                        border: 2px solid rgba(255, 255, 255, 0.6);
+                        border-radius: 50%;
+                        z-index: 1001;
+                        box-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
+                        touch-action: none;
+                    }
+                    
+                    .virtual-joystick-inner {
+                        position: absolute;
+                        width: 50px;
+                        height: 50px;
+                        background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(100, 200, 255, 0.8) 100%);
+                        border-radius: 50%;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+                    }
+                    
+                    /* Fixed positioning for mobile buttons to avoid overlay issues */
+                    #toggle-light-button {
+                        bottom: 150px;
+                        left: 20px;
+                    }
+                    
+                    #flashlight-button {
+                        bottom: 150px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                    }
+                    
+                    #flashlight-button:active, #flashlight-button.active {
+                        transform: translateX(-50%) scale(1.1);
+                    }
+                    
+                    #easter-egg-button {
+                        bottom: 150px;
+                        right: 20px;
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                // Create a fake touch-controls.css link to prevent 404
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'data:text/css;base64,LyogRW1wdHkgQ1NTIGZpbGUgKi8='; // Base64 for "/* Empty CSS file */"
+                link.id = 'touch-controls-css';
+                document.head.appendChild(link);
+                
+                // Prevent future attempts to load touch-controls.css
+                const originalCreateElement = document.createElement;
+                document.createElement = function(tagName) {
+                    const element = originalCreateElement.call(document, tagName);
+                    
+                    if (tagName.toLowerCase() === 'link') {
+                        const originalSetAttribute = element.setAttribute;
+                        element.setAttribute = function(name, value) {
+                            if (name === 'href' && value && value.includes('touch-controls.css')) {
+                                console.log('Prevented loading of touch-controls.css');
+                                return;
+                            }
+                            return originalSetAttribute.call(this, name, value);
+                        };
+                    }
+                    
+                    return element;
+                };
+            })();
+        </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ljus & Mörker: Utforskningsspel</title>
