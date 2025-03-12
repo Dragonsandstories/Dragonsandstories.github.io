@@ -146,115 +146,108 @@ class Player {
         }
         
         // Hantera rörelse
-        this.handleMovement(time, delta);
+        handleMovement(time, delta) 
+            const cursors = this.scene.cursors;
+            const keys = this.scene.keys;
         
-        // Uppdatera ljusradie baserat på intensitet
-        if (this.isLightOn) {
-            this.lightRadius = getMaxLightRadius(this.scene.currentLevel) * (this.lightIntensity / 100);
-        } else {
-            this.lightRadius = MIN_LIGHT_RADIUS;
-        }
+            // Beräkna rörelseriktning
+            let dx = 0, dy = 0;
         
-        // Uppdatera spelarens grafik
-        this.updateSprites();
+            // Check keyboard input (WASD or arrow keys)
+            if (cursors.up.isDown || keys.W.isDown) dy -= 1;
+            if (cursors.down.isDown || keys.S.isDown) dy += 1;
+            if (cursors.left.isDown || keys.A.isDown) dx -= 1;
+            if (cursors.right.isDown || keys.D.isDown) dx += 1;
         
-        // Kollisionshantering med kristaller
-        this.checkCrystalCollisions();
-    }
-    
-    handleMovement(time, delta) {
-        const cursors = this.scene.cursors;
-        const keys = this.scene.keys;
+            // Check touch input (virtual keys from touch.js)
+            if (window.virtualKeys) {
+                if (window.virtualKeys.up) dy -= 1;
+                if (window.virtualKeys.down) dy += 1;
+                if (window.virtualKeys.left) dx -= 1;
+                if (window.virtualKeys.right) dx += 1;
+            }
         
-        // Beräkna rörelseriktning
-        let dx = 0, dy = 0;
+            // Normalisera diagonal rörelse
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.7071;
+                dy *= 0.7071;
+            }
         
-        if (cursors.up.isDown || keys.W.isDown) dy -= 1;
-        if (cursors.down.isDown || keys.S.isDown) dy += 1;
-        if (cursors.left.isDown || keys.A.isDown) dx -= 1;
-        if (cursors.right.isDown || keys.D.isDown) dx += 1;
+            this.isMoving = (dx !== 0 || dy !== 0);
         
-        // Normalisera diagonal rörelse
-        if (dx !== 0 && dy !== 0) {
-            dx *= 0.7071;
-            dy *= 0.7071;
-        }
+            if (this.isMoving) {
+                this.direction = Math.atan2(dy, dx);
         
-        this.isMoving = (dx !== 0 || dy !== 0);
+                // Hantera sprint och stamina
+                const wantToSprint = (cursors.shift.isDown && !this.isTired && this.stamina > 0);
         
-        if (this.isMoving) {
-            this.direction = Math.atan2(dy, dx);
-            
-            // Hantera sprint och stamina
-            const wantToSprint = (cursors.shift.isDown && !this.isTired && this.stamina > 0);
-            
-            if (wantToSprint) {
-                this.isSprinting = true;
-                this.stamina = Math.max(0, this.stamina - STAMINA_DRAIN_RATE * (delta / 16));
-                
-                if (this.stamina <= 0) {
-                    this.isTired = true;
-                    this.tiredUntil = time + TIRED_DURATION;
+                if (wantToSprint) {
+                    this.isSprinting = true;
+                    this.stamina = Math.max(0, this.stamina - STAMINA_DRAIN_RATE * (delta / 16));
+        
+                    if (this.stamina <= 0) {
+                        this.isTired = true;
+                        this.tiredUntil = time + TIRED_DURATION;
+                        this.isSprinting = false;
+                    }
+        
+                    // Öka hastighet gradvis
+                    this.currentSpeed = Phaser.Math.Linear(
+                        this.currentSpeed,
+                        PLAYER_MAX_SPRINT_SPEED,
+                        0.1
+                    );
+        
+                    // Minska ljusintensitet vid löpning
+                    if (this.isLightOn) {
+                        this.lightIntensity = Math.max(50, this.lightIntensity - 0.1 * (delta / 16));
+                        this.scene.updateLightLevelUI(Math.floor(this.lightIntensity));
+                    }
+                } else {
                     this.isSprinting = false;
+        
+                    // Målhastighet beror på om spelaren är trött
+                    const targetSpeed = this.isTired ? PLAYER_TIRED_SPEED : PLAYER_SPEED;
+        
+                    // Mjuk övergång till målhastigheten
+                    this.currentSpeed = Phaser.Math.Linear(
+                        this.currentSpeed,
+                        targetSpeed,
+                        0.1
+                    );
                 }
-                
-                // Öka hastighet gradvis
-                this.currentSpeed = Phaser.Math.Linear(
-                    this.currentSpeed,
-                    PLAYER_MAX_SPRINT_SPEED,
-                    0.1
-                );
-                
-                // Minska ljusintensitet vid löpning
-                if (this.isLightOn) {
-                    this.lightIntensity = Math.max(50, this.lightIntensity - 0.1 * (delta / 16));
-                    this.scene.updateLightLevelUI(Math.floor(this.lightIntensity));
-                }
+        
+                // Beräkna ny position
+                const newX = this.x + dx * this.currentSpeed * (delta / 1000);
+                const newY = this.y + dy * this.currentSpeed * (delta / 1000);
+        
+                // Kollisionshantering
+                this.moveWithCollision(newX, newY);
             } else {
+                // Sakta ner när vi inte rör oss
+                if (this.currentSpeed > this.speed) {
+                    this.currentSpeed = Phaser.Math.Linear(
+                        this.currentSpeed,
+                        this.speed,
+                        0.15
+                    );
+                }
                 this.isSprinting = false;
-                
-                // Målhastighet beror på om spelaren är trött
-                const targetSpeed = this.isTired ? PLAYER_TIRED_SPEED : PLAYER_SPEED;
-                
-                // Mjuk övergång till målhastigheten
-                this.currentSpeed = Phaser.Math.Linear(
-                    this.currentSpeed,
-                    targetSpeed,
-                    0.1
-                );
             }
-            
-            // Beräkna ny position
-            const newX = this.x + dx * this.currentSpeed * (delta / 1000);
-            const newY = this.y + dy * this.currentSpeed * (delta / 1000);
-            
-            // Kollisionshantering
-            this.moveWithCollision(newX, newY);
-        } else {
-            // Sakta ner när vi inte rör oss
-            if (this.currentSpeed > this.speed) {
-                this.currentSpeed = Phaser.Math.Linear(
-                    this.currentSpeed,
-                    this.speed,
-                    0.15
-                );
+        
+            // Återhämta stamina när vi inte springer
+            if (!this.isSprinting && this.stamina < MAX_STAMINA) {
+                this.stamina = Math.min(MAX_STAMINA, this.stamina + STAMINA_RECOVERY_RATE * (delta / 16));
             }
-            this.isSprinting = false;
-        }
         
-        // Återhämta stamina när vi inte springer
-        if (!this.isSprinting && this.stamina < MAX_STAMINA) {
-            this.stamina = Math.min(MAX_STAMINA, this.stamina + STAMINA_RECOVERY_RATE * (delta / 16));
-        }
+            // Återställ ljuset sakta om vi inte springer
+            if (this.isLightOn && this.lightIntensity < 100 && (!this.isSprinting || !this.isMoving)) {
+                this.lightIntensity = Math.min(100, this.lightIntensity + 0.01 * (delta / 16));
+                this.scene.updateLightLevelUI(Math.floor(this.lightIntensity));
+            }
         
-        // Återställ ljuset sakta om vi inte springer
-        if (this.isLightOn && this.lightIntensity < 100 && (!this.isSprinting || !this.isMoving)) {
-            this.lightIntensity = Math.min(100, this.lightIntensity + 0.01 * (delta / 16));
-            this.scene.updateLightLevelUI(Math.floor(this.lightIntensity));
+            this.scene.updateStaminaUI(this.stamina, this.isTired);
         }
-        
-        this.scene.updateStaminaUI(this.stamina, this.isTired);
-    }
     
     moveWithCollision(newX, newY) {
         // Kontrollera x-rörelse

@@ -1,56 +1,3 @@
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('#highscore-screen, #message-overlay, #easter-egg, #ui-overlay, #instructions').forEach(function(element) {
-        element.classList.add('hidden');
-    });
-    
-    document.getElementById('title-screen').classList.remove('hidden');
-});
-
-const config = {
-    type: Phaser.AUTO,
-    width: 800,
-    height: 600,
-    parent: 'game-container',
-    backgroundColor: '#000',
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { y: 0 },
-            debug: false
-        }
-    },
-    scene: {
-        preload: preload,
-        create: create,
-        update: update
-    },
-    callbacks: {
-        postBoot: function() {
-        }
-    }
-};
-
-let game;
-let gameRunning = false;
-let gameOver = false;
-let gameWon = false;
-let highscores = [];
-let newHighscore = false;
-
-function getElement(id) {
-    const element = document.getElementById(id);
-    if (!element) {
-    }
-    return element;
-}
-
-function addClickListener(element, handler) {
-    if (element) {
-        element.addEventListener('click', handler);
-    } else {
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const startButton = getElement('start-button');
     const restartButton = getElement('restart-button');
@@ -60,12 +7,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearHighscoresButton = getElement('clear-highscores-button');
     const easterEggCloseButton = getElement('easter-egg-close');
     const playerNameInput = getElement('player-name');
-    
+    // Add new buttons for touch controls
+    const toggleLightButton = getElement('toggle-light-button');
+    const flashlightButton = getElement('flashlight-button');
+    const easterEggButton = getElement('easter-egg-button');
+
     if (playerNameInput) {
         playerNameInput.addEventListener('keydown', e => e.stopPropagation());
         playerNameInput.addEventListener('keypress', e => e.stopPropagation());
         playerNameInput.addEventListener('keyup', e => e.stopPropagation());
-        
+
         playerNameInput.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -73,105 +24,139 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     addClickListener(startButton, () => {
         const titleScreen = getElement('title-screen');
         const uiOverlay = getElement('ui-overlay');
         const instructions = getElement('instructions');
-        
+
         if (titleScreen) titleScreen.classList.add('hidden');
         if (uiOverlay) uiOverlay.classList.remove('hidden');
         if (instructions) instructions.classList.remove('hidden');
-        
+
         try {
             if (!game) {
                 game = new Phaser.Game(config);
             } else {
                 startGame();
             }
-        } catch (error) {
-        }
+        } catch (error) {}
     });
-    
+
     addClickListener(restartButton, () => {
         const messageOverlay = getElement('message-overlay');
         if (messageOverlay) messageOverlay.classList.add('hidden');
         if (restartButton) restartButton.classList.add('hidden');
         startNewGame();
     });
-    
+
     addClickListener(nextLevelButton, () => {
         const messageOverlay = getElement('message-overlay');
         if (messageOverlay) messageOverlay.classList.add('hidden');
         if (nextLevelButton) nextLevelButton.classList.add('hidden');
-        
+
         if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
             game.scene.scenes[0].resumeGame();
         }
     });
-    
+
     addClickListener(saveScoreButton, () => {
         const nameInput = getElement('player-name');
         const nameInputContainer = getElement('name-input-container');
-        
+
         if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
             const playerName = (nameInput && nameInput.value) ? nameInput.value.trim() : "Okänd spelare";
             const score = game.scene.scenes[0].player.score;
             const level = game.scene.scenes[0].currentLevel;
-            
+
             console.log(`Sparar highscore: ${playerName}, poäng: ${score}, nivå: ${level}`);
             saveHighscore(playerName, score, level);
-            
+
             if (nameInputContainer) {
                 nameInputContainer.classList.add('hidden');
                 nameInputContainer.style.display = 'none';
             }
-            
+
             updateHighscoreTable();
         }
     });
-    
+
     addClickListener(playAgainButton, () => {
         const highscoreScreen = getElement('highscore-screen');
         if (highscoreScreen) highscoreScreen.classList.add('hidden');
         startNewGame();
     });
-    
+
     addClickListener(clearHighscoresButton, () => {
         if (confirm("Är du säker på att du vill rensa topplistan?")) {
             highscores = [];
-            
+
             try {
                 localStorage.removeItem(STORAGE_KEY);
-            } catch (error) {
-            }
-            
+            } catch (error) {}
+
             updateHighscoreTable();
         }
     });
-    
+
     addClickListener(easterEggCloseButton, () => {
         const easterEgg = getElement('easter-egg');
         if (easterEgg) easterEgg.classList.add('hidden');
-        
+
         if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
             game.scene.scenes[0].resumeGame();
-            
+
             if (game.scene.scenes[0].easterEggHint) {
                 game.scene.scenes[0].easterEggHint.visible = false;
             }
         }
     });
-    
+
+    // Add touch control for toggling light (equivalent to Spacebar)
+    addClickListener(toggleLightButton, () => {
+        if (game && game.scene && game.scene.scenes && game.scene.scenes[0] && gameRunning) {
+            game.scene.scenes[0].player.toggleLight();
+        }
+    });
+
+    // Add touch control for activating flashlight (equivalent to F key)
+    addClickListener(flashlightButton, () => {
+        if (game && game.scene && game.scene.scenes && game.scene.scenes[0] && gameRunning && !game.scene.scenes[0].player.flashlightActive) {
+            game.scene.scenes[0].player.activateFlashlight();
+        }
+    });
+
+    // Add touch control for Easter egg (equivalent to E key)
+    addClickListener(easterEggButton, () => {
+        if (game && game.scene && game.scene.scenes && game.scene.scenes[0] && gameRunning && game.scene.scenes[0].currentLevel === 1) {
+            game.scene.scenes[0].pauseGame();
+            document.getElementById('easter-egg').classList.remove('hidden');
+
+            if (game.scene.scenes[0].easterEggHint) {
+                game.scene.scenes[0].easterEggHint.setScale(2);
+                game.scene.scenes[0].easterEggHint.setAlpha(1);
+                game.scene.scenes[0].tweens.add({
+                    targets: game.scene.scenes[0].easterEggHint,
+                    scale: { from: 2, to: 0 },
+                    alpha: { from: 1, to: 0 },
+                    duration: 500,
+                    onComplete: () => {
+                        game.scene.scenes[0].easterEggHint.visible = false;
+                    }
+                });
+            }
+        }
+    });
+
     try {
         highscores = loadHighscores();
     } catch (error) {
         highscores = [];
     }
-    
+
     createStars();
     createParticles();
-    
+
     const titleScreen = getElement('title-screen');
     if (titleScreen) {
         titleScreen.addEventListener('mousemove', handleMouseMove);

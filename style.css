@@ -710,7 +710,8 @@ canvas {
     100% { transform: translate(var(--move-x), var(--move-y)) scale(var(--scale-to)); opacity: 0; }
 }
 
-/* RESPONSIVE DESIGN */
+
+
 @media (max-width: 1200px) {
     #title-screen h1 {
         font-size: 50px;
@@ -776,5 +777,39 @@ canvas {
     #easter-egg-close {
         padding: 12px 20px;
         font-size: 14px;
+    }
+}
+/* Touch Buttons for Mobile Controls */
+.touch-button {
+    position: absolute;
+    bottom: 20px;
+    padding: 10px 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: 1px solid white;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    z-index: 1001; /* Ensure buttons are above the game canvas */
+}
+
+#toggle-light-button {
+    left: 20px;
+}
+
+#flashlight-button {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#easter-egg-button {
+    right: 20px;
+}
+
+/* Adjust button size for smaller screens */
+@media (max-width: 600px) {
+    .touch-button {
+        font-size: 14px;
+        padding: 8px 16px;
     }
 }
