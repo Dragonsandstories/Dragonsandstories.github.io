@@ -10,8 +10,11 @@ if (!window.virtualKeys) {
 
 // Set up touch controls when the document is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    setupTouchControls();
-    console.log("Touch controls initialized");
+    // Small delay to ensure all DOM elements are properly rendered
+    setTimeout(() => {
+        setupTouchControls();
+        console.log("Touch controls initialized");
+    }, 100);
 });
 
 function setupTouchControls() {
@@ -60,19 +63,26 @@ function setupTouchControls() {
     touchIndicator.className = 'touch-indicator';
     gameContainer.appendChild(touchIndicator);
     
-    // Get touch buttons
+    // Get touch buttons - with defensive check
     const touchButtons = document.querySelectorAll('.touch-button');
     
-    // Add visual feedback for button presses
-    touchButtons.forEach(button => {
-        button.addEventListener('touchstart', () => {
-            button.classList.add('active');
+    // Add visual feedback for button presses (with check if buttons exist)
+    if (touchButtons && touchButtons.length > 0) {
+        console.log("Found " + touchButtons.length + " touch buttons");
+        touchButtons.forEach(button => {
+            if (button) {
+                button.addEventListener('touchstart', () => {
+                    button.classList.add('active');
+                });
+                
+                button.addEventListener('touchend', () => {
+                    button.classList.remove('active');
+                });
+            }
         });
-        
-        button.addEventListener('touchend', () => {
-            button.classList.remove('active');
-        });
-    });
+    } else {
+        console.warn("No touch buttons found. This is expected if UI is not yet rendered.");
+    }
 
     // Handle touch start
     gameContainer.addEventListener('touchstart', (event) => {
@@ -121,8 +131,6 @@ function setupTouchControls() {
             window.virtualKeys.up = deltaY < 0;
             window.virtualKeys.down = deltaY > 0;
         }
-        
-        console.log("Touch move detected:", window.virtualKeys);
     }, { passive: true });
 
     // Handle touch end
@@ -170,9 +178,15 @@ function setupTouchControls() {
     
     // Trigger light toggle function (same as spacebar)
     function triggerLightToggle() {
-        if (window.game?.scene?.scenes[0] && window.gameRunning) {
+        if (window.game && window.game.scene && 
+            window.game.scene.scenes && 
+            window.game.scene.scenes[0] && 
+            typeof window.gameRunning !== 'undefined' && 
+            window.gameRunning) {
             window.game.scene.scenes[0].player.toggleLight();
             console.log("Light toggled via screen tap");
+        } else {
+            console.log("Game not ready for light toggle");
         }
     }
 }
