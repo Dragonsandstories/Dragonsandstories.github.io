@@ -1,77 +1,198 @@
-// Touch control variables
-let touchStartX = 0;
-let touchStartY = 0;
-let touchCurrentX = 0;
-let touchCurrentY = 0;
-let isTouching = false;
+// Initialize virtual keys for touch controls
+if (!window.virtualKeys) {
+    window.virtualKeys = {
+        up: false,
+        down: false,
+        left: false,
+        right: false
+    };
+}
 
-// Simulated key states (to mimic WASD/arrow keys)
-window.virtualKeys = {
-    up: false,
-    down: false,
-    left: false,
-    right: false
-};
-
-// Threshold for detecting movement (to avoid tiny unintended movements)
-const TOUCH_THRESHOLD = 10;
-
-// Get the game container
-const gameContainer = document.getElementById('game-container');
-
-// Touch start event
-gameContainer.addEventListener('touchstart', (event) => {
-    event.preventDefault(); // Prevent scrolling or zooming
-    const touch = event.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    touchCurrentX = touchStartX;
-    touchCurrentY = touchStartY;
-    isTouching = true;
+// Set up touch controls when the document is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    setupTouchControls();
+    console.log("Touch controls initialized");
 });
 
-// Touch move event
-gameContainer.addEventListener('touchmove', (event) => {
-    event.preventDefault();
-    if (!isTouching) return;
+function setupTouchControls() {
+    const gameContainer = document.getElementById('game-container');
+    if (!gameContainer) {
+        console.error("Game container not found");
+        return;
+    }
 
-    const touch = event.touches[0];
-    touchCurrentX = touch.clientX;
-    touchCurrentY = touch.clientY;
+    // Area for swipe recognition - entire screen except UI area
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchTime = 0;
+    let isSwiping = false;
 
-    // Calculate the delta (movement distance)
-    const deltaX = touchCurrentX - touchStartX;
-    const deltaY = touchCurrentY - touchStartY;
+    // Constants for touch sensitivity
+    const SWIPE_THRESHOLD = 30;
+    const SWIPE_TIME_THRESHOLD = 300; // ms
+    
+    // Add CSS for touch feedback
+    const style = document.createElement('style');
+    style.textContent = `
+        .touch-button.active {
+            background-color: rgba(100, 200, 255, 0.7) !important;
+            box-shadow: 0 0 15px rgba(100, 200, 255, 0.9) !important;
+        }
+        
+        .touch-indicator {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Create touch indicator element
+    const touchIndicator = document.createElement('div');
+    touchIndicator.className = 'touch-indicator';
+    gameContainer.appendChild(touchIndicator);
+    
+    // Get touch buttons
+    const touchButtons = document.querySelectorAll('.touch-button');
+    
+    // Add visual feedback for button presses
+    touchButtons.forEach(button => {
+        button.addEventListener('touchstart', () => {
+            button.classList.add('active');
+        });
+        
+        button.addEventListener('touchend', () => {
+            button.classList.remove('active');
+        });
+    });
 
-    // Reset virtual keys
-    window.virtualKeys.up = false;
-    window.virtualKeys.down = false;
-    window.virtualKeys.left = false;
-    window.virtualKeys.right = false;
+    // Handle touch start
+    gameContainer.addEventListener('touchstart', (event) => {
+        // Don't process if touching a UI element
+        if (event.target.closest('#ui-overlay, .touch-button, #message-overlay, #highscore-screen, #easter-egg')) {
+            return;
+        }
 
-    // Determine direction based on the larger delta
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Horizontal movement
-        if (Math.abs(deltaX) > TOUCH_THRESHOLD) {
+        const touch = event.touches[0];
+        
+        // Show touch indicator
+        touchIndicator.style.left = touch.clientX + 'px';
+        touchIndicator.style.top = touch.clientY + 'px';
+        touchIndicator.style.opacity = '1';
+        touchIndicator.style.transform = 'translate(-50%, -50%) scale(1)';
+        
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchTime = Date.now();
+        isSwiping = true;
+        
+        // Reset virtual keys state
+        resetVirtualKeys();
+    }, { passive: true });
+
+    // Handle touch move
+    gameContainer.addEventListener('touchmove', (event) => {
+        if (!isSwiping) return;
+        
+        const touch = event.touches[0];
+        
+        // Update touch indicator
+        touchIndicator.style.left = touch.clientX + 'px';
+        touchIndicator.style.top = touch.clientY + 'px';
+        
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        
+        // Only set direction if sufficient movement detected
+        if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
             window.virtualKeys.left = deltaX < 0;
             window.virtualKeys.right = deltaX > 0;
         }
-    } else {
-        // Vertical movement
-        if (Math.abs(deltaY) > TOUCH_THRESHOLD) {
+        
+        if (Math.abs(deltaY) > SWIPE_THRESHOLD) {
             window.virtualKeys.up = deltaY < 0;
             window.virtualKeys.down = deltaY > 0;
         }
-    }
-});
+        
+        console.log("Touch move detected:", window.virtualKeys);
+    }, { passive: true });
 
-// Touch end event
-gameContainer.addEventListener('touchend', (event) => {
-    event.preventDefault();
-    isTouching = false;
-    // Reset virtual keys when the touch ends
-    window.virtualKeys.up = false;
-    window.virtualKeys.down = false;
-    window.virtualKeys.left = false;
-    window.virtualKeys.right = false;
-});
+    // Handle touch end
+    gameContainer.addEventListener('touchend', (event) => {
+        if (!isSwiping) return;
+        
+        // Hide touch indicator with fade out effect
+        touchIndicator.style.opacity = '0';
+        touchIndicator.style.transform = 'translate(-50%, -50%) scale(0.5)';
+        
+        // Check if it was a quick tap (potential toggle light action)
+        const touchDuration = Date.now() - touchTime;
+        if (touchDuration < SWIPE_TIME_THRESHOLD) {
+            // If touch didn't move much, consider it a tap to toggle light
+            const touch = event.changedTouches[0];
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+            
+            if (Math.abs(deltaX) < SWIPE_THRESHOLD && Math.abs(deltaY) < SWIPE_THRESHOLD) {
+                triggerLightToggle();
+            }
+        }
+        
+        // Reset state
+        isSwiping = false;
+        resetVirtualKeys();
+    }, { passive: true });
+    
+    // Handle touch cancel
+    gameContainer.addEventListener('touchcancel', () => {
+        // Hide touch indicator
+        touchIndicator.style.opacity = '0';
+        
+        isSwiping = false;
+        resetVirtualKeys();
+    }, { passive: true });
+    
+    // Reset virtual keys to initial state
+    function resetVirtualKeys() {
+        window.virtualKeys.up = false;
+        window.virtualKeys.down = false;
+        window.virtualKeys.left = false;
+        window.virtualKeys.right = false;
+    }
+    
+    // Trigger light toggle function (same as spacebar)
+    function triggerLightToggle() {
+        if (window.game?.scene?.scenes[0] && window.gameRunning) {
+            window.game.scene.scenes[0].player.toggleLight();
+            console.log("Light toggled via screen tap");
+        }
+    }
+}
+
+// Export virtual keys object to ensure it's globally available
+window.getVirtualKeys = function() {
+    return window.virtualKeys;
+};
+
+// Debug function to check if touch controls are working
+window.debugTouchControls = function() {
+    console.log("Current virtual keys state:", window.virtualKeys);
+    
+    // Test setting values
+    window.virtualKeys.up = true;
+    console.log("After setting up=true:", window.virtualKeys);
+    
+    // Reset after 1 second
+    setTimeout(() => {
+        window.virtualKeys.up = false;
+        console.log("After 1s reset:", window.virtualKeys);
+    }, 1000);
+};

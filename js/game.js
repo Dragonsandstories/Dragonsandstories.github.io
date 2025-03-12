@@ -5,6 +5,7 @@ function addClickListener(element, callback) {
         console.warn('Element not found for click listener:', element);
     }
 }
+
 document.addEventListener('DOMContentLoaded', () => {
     const startButton = document.getElementById('start-button');
     const restartButton = document.getElementById('restart-button');
@@ -14,16 +15,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearHighscoresButton = document.getElementById('clear-highscores-button');
     const easterEggCloseButton = document.getElementById('easter-egg-close');
     const playerNameInput = document.getElementById('player-name');
-    // Add new buttons for touch controls
     const toggleLightButton = document.getElementById('toggle-light-button');
     const flashlightButton = document.getElementById('flashlight-button');
     const easterEggButton = document.getElementById('easter-egg-button');
+
+    if (!window.virtualKeys) {
+        window.virtualKeys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+    }
 
     if (playerNameInput) {
         playerNameInput.addEventListener('keydown', e => e.stopPropagation());
         playerNameInput.addEventListener('keypress', e => e.stopPropagation());
         playerNameInput.addEventListener('keyup', e => e.stopPropagation());
-
         playerNameInput.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -47,7 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 startGame();
             }
-        } catch (error) {}
+        } catch (error) {
+            console.error('Error starting game:', error);
+        }
     });
 
     addClickListener(restartButton, () => {
@@ -76,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const score = game.scene.scenes[0].player.score;
             const level = game.scene.scenes[0].currentLevel;
 
-            console.log(`Sparar highscore: ${playerName}, poäng: ${score}, nivå: ${level}`);
+            console.log(`Saving highscore: ${playerName}, score: ${score}, level: ${level}`);
             saveHighscore(playerName, score, level);
 
             if (nameInputContainer) {
@@ -97,11 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
     addClickListener(clearHighscoresButton, () => {
         if (confirm("Är du säker på att du vill rensa topplistan?")) {
             highscores = [];
-
             try {
                 localStorage.removeItem(STORAGE_KEY);
-            } catch (error) {}
-
+            } catch (error) {
+                console.error('Error clearing highscores:', error);
+            }
             updateHighscoreTable();
         }
     });
@@ -119,23 +129,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Add touch control for toggling light (equivalent to Spacebar)
     addClickListener(toggleLightButton, () => {
-        if (game && game.scene && game.scene.scenes && game.scene.scenes[0] && gameRunning) {
+        if (game?.scene?.scenes[0] && gameRunning) {
             game.scene.scenes[0].player.toggleLight();
+            console.log("Light toggled via touch button");
         }
     });
 
-    // Add touch control for activating flashlight (equivalent to F key)
     addClickListener(flashlightButton, () => {
-        if (game && game.scene && game.scene.scenes && game.scene.scenes[0] && gameRunning && !game.scene.scenes[0].player.flashlightActive) {
+        if (game?.scene?.scenes[0] && gameRunning && !game.scene.scenes[0].player.flashlightActive) {
             game.scene.scenes[0].player.activateFlashlight();
+            console.log("Flashlight activated via touch button");
         }
     });
 
-    // Add touch control for Easter egg (equivalent to E key)
     addClickListener(easterEggButton, () => {
-        if (game && game.scene && game.scene.scenes && game.scene.scenes[0] && gameRunning && game.scene.scenes[0].currentLevel === 1) {
+        if (game?.scene?.scenes[0] && gameRunning && game.scene.scenes[0].currentLevel === 1) {
             game.scene.scenes[0].pauseGame();
             document.getElementById('easter-egg').classList.remove('hidden');
 
@@ -158,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         highscores = loadHighscores();
     } catch (error) {
+        console.error('Error loading highscores:', error);
         highscores = [];
     }
 
@@ -168,7 +178,132 @@ document.addEventListener('DOMContentLoaded', () => {
     if (titleScreen) {
         titleScreen.addEventListener('mousemove', handleMouseMove);
     }
+
+    setupMobileControls();
 });
+
+function setupMobileControls() {
+    const gameContainer = document.getElementById('game-container');
+    
+    if (!gameContainer) return;
+    
+    const joystickSize = 120;
+    const joystickInnerSize = 50;
+    
+    const joystick = document.createElement('div');
+    joystick.className = 'virtual-joystick';
+    joystick.style.cssText = `
+        position: absolute;
+        bottom: 100px;
+        left: 30px;
+        width: ${joystickSize}px;
+        height: ${joystickSize}px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: none;
+        z-index: 1001;
+        touch-action: none;
+    `;
+    
+    const joystickInner = document.createElement('div');
+    joystickInner.className = 'virtual-joystick-inner';
+    joystickInner.style.cssText = `
+        position: absolute;
+        width: ${joystickInnerSize}px;
+        height: ${joystickInnerSize}px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    `;
+    
+    joystick.appendChild(joystickInner);
+    gameContainer.appendChild(joystick);
+    
+    let joystickActive = false;
+    let joystickTouchId = null;
+    
+    gameContainer.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        const touchX = touch.clientX;
+        const touchY = touch.clientY;
+        
+        if (touchX < window.innerWidth / 2 && touchY > window.innerHeight / 2) {
+            e.preventDefault();
+            joystickActive = true;
+            joystickTouchId = touch.identifier;
+            
+            joystick.style.display = 'block';
+            joystick.style.left = (touchX - joystickSize / 2) + 'px';
+            joystick.style.bottom = (window.innerHeight - touchY - joystickSize / 2) + 'px';
+            
+            joystickInner.style.top = '50%';
+            joystickInner.style.left = '50%';
+        }
+    }, { passive: false });
+    
+    window.addEventListener('touchmove', (e) => {
+        if (!joystickActive) return;
+        
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            
+            if (touch.identifier === joystickTouchId) {
+                e.preventDefault();
+                
+                const joystickRect = joystick.getBoundingClientRect();
+                const centerX = joystickRect.left + joystickRect.width / 2;
+                const centerY = joystickRect.top + joystickRect.height / 2;
+                
+                let deltaX = touch.clientX - centerX;
+                let deltaY = touch.clientY - centerY;
+                
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const maxDistance = joystickRect.width / 2 - joystickInnerSize / 2;
+                
+                if (distance > maxDistance) {
+                    const factor = maxDistance / distance;
+                    deltaX *= factor;
+                    deltaY *= factor;
+                }
+                
+                joystickInner.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+                
+                const deadzone = 0.25;
+                const normalizedX = Math.abs(deltaX / maxDistance) > deadzone ? deltaX / maxDistance : 0;
+                const normalizedY = Math.abs(deltaY / maxDistance) > deadzone ? deltaY / maxDistance : 0;
+                
+                window.virtualKeys.left = normalizedX < -deadzone;
+                window.virtualKeys.right = normalizedX > deadzone;
+                window.virtualKeys.up = normalizedY < -deadzone;
+                window.virtualKeys.down = normalizedY > deadzone;
+                
+                break;
+            }
+        }
+    }, { passive: false });
+    
+    window.addEventListener('touchend', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            
+            if (touch.identifier === joystickTouchId) {
+                e.preventDefault();
+                joystickActive = false;
+                joystick.style.display = 'none';
+                
+                window.virtualKeys.up = false;
+                window.virtualKeys.down = false;
+                window.virtualKeys.left = false;
+                window.virtualKeys.right = false;
+                
+                break;
+            }
+        }
+    }, { passive: false });
+}
 
 function preload() {}
 
@@ -405,62 +540,68 @@ function create() {
     };
     
     this.updateLightLevelUI = function(value) {
-        document.getElementById('light-level').textContent = value;
+        const lightLevelElement = document.getElementById('light-level');
+        if (lightLevelElement) lightLevelElement.textContent = value;
     };
     
     this.updateCrystalsUI = function(value) {
-        document.getElementById('crystals-collected').textContent = value;
+        const crystalsCollectedElement = document.getElementById('crystals-collected');
+        if (crystalsCollectedElement) crystalsCollectedElement.textContent = value;
     };
     
     this.updateTotalCrystalsUI = function(value) {
-        document.getElementById('total-crystals').textContent = value;
+        const totalCrystalsElement = document.getElementById('total-crystals');
+        if (totalCrystalsElement) totalCrystalsElement.textContent = value;
     };
     
     this.updateScoreUI = function(value) {
-        document.getElementById('score').textContent = value;
+        const scoreElement = document.getElementById('score');
+        if (scoreElement) scoreElement.textContent = value;
     };
     
     this.updateLevelUI = function(value) {
-        document.getElementById('level').textContent = value;
+        const levelElement = document.getElementById('level');
+        if (levelElement) levelElement.textContent = value;
     };
     
     this.updateStaminaUI = function(stamina, isTired) {
         const percentage = (stamina / MAX_STAMINA) * 100;
         const staminaBar = document.getElementById('stamina-bar');
         
-        staminaBar.style.width = `${percentage}%`;
-        
-        if (percentage > 60) {
-            staminaBar.style.backgroundColor = "#4CAF50";
-        } else if (percentage > 30) {
-            staminaBar.style.backgroundColor = "#FFC107";
-        } else {
-            staminaBar.style.backgroundColor = "#F44336";
-        }
-        
-        if (isTired) {
-            staminaBar.style.opacity = "0.5";
-        } else {
-            staminaBar.style.opacity = "1";
+        if (staminaBar) {
+            staminaBar.style.width = `${percentage}%`;
+            
+            if (percentage > 60) {
+                staminaBar.style.backgroundColor = "#4CAF50";
+            } else if (percentage > 30) {
+                staminaBar.style.backgroundColor = "#FFC107";
+            } else {
+                staminaBar.style.backgroundColor = "#F44336";
+            }
+            
+            staminaBar.style.opacity = isTired ? "0.5" : "1";
         }
     };
     
     this.showMessage = function(text) {
         const messageText = document.getElementById('message-text');
-        messageText.textContent = text;
         const messageOverlay = document.getElementById('message-overlay');
         
-        messageOverlay.style.display = 'flex';
-        messageOverlay.style.flexDirection = 'column';
-        messageOverlay.style.justifyContent = 'center';
-        messageOverlay.style.alignItems = 'center';
-        messageOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        messageOverlay.style.color = 'white';
-        messageOverlay.style.fontSize = '24px';
-        messageOverlay.style.padding = '20px';
-        messageOverlay.style.zIndex = '1000';
+        if (messageText) messageText.textContent = text;
         
-        messageOverlay.classList.remove('hidden');
+        if (messageOverlay) {
+            messageOverlay.style.display = 'flex';
+            messageOverlay.style.flexDirection = 'column';
+            messageOverlay.style.justifyContent = 'center';
+            messageOverlay.style.alignItems = 'center';
+            messageOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            messageOverlay.style.color = 'white';
+            messageOverlay.style.fontSize = '24px';
+            messageOverlay.style.padding = '20px';
+            messageOverlay.style.zIndex = '1000';
+            
+            messageOverlay.classList.remove('hidden');
+        }
     };
     
     this.nextLevel = function() {
@@ -542,6 +683,7 @@ function create() {
                 nextLevelButton.classList.remove('hidden');
             }
         } catch (error) {
+            console.error('Error transitioning to next level:', error);
             this.isLevelTransitioning = false;
         }
     };
@@ -550,9 +692,8 @@ function create() {
         gameRunning = false;
         gameOver = true;
         
-        // Kontrollera highscore innan vi visar meddelanden
         const finalScore = this.player.score;
-        console.log("Spelet slut, poäng:", finalScore);
+        console.log("Game over, score:", finalScore);
         checkHighscore(finalScore);
         
         this.showMessage(message);
@@ -595,7 +736,6 @@ function create() {
     this.player = new Player(this, playerStart.x, playerStart.y);
     
     const enemyCount = 3 + (this.currentLevel - 1) * LEVEL_ENEMY_INCREASE;
-    
     const crystalCount = TOTAL_CRYSTALS + (this.currentLevel - 1) * LEVEL_CRYSTAL_INCREASE;
     
     this.enemies = [];
@@ -715,7 +855,7 @@ function update(time, delta) {
 
 function startGame() {
     try {
-        if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
+        if (game?.scene?.scenes[0]) {
             const currentLevel = game.scene.scenes[0].currentLevel || 1;
             
             document.getElementById('highscore-screen').classList.add('hidden');
@@ -728,6 +868,7 @@ function startGame() {
             game = new Phaser.Game(config);
         }
     } catch (error) {
+        console.error('Error starting game:', error);
     }
 }
 
@@ -737,17 +878,18 @@ function startNewGame() {
         
         window.savedGameLevel = 1;
         
-        if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
+        if (game?.scene?.scenes[0]) {
             game.scene.scenes[0].scene.restart();
         } else {
             game = new Phaser.Game(config);
         }
     } catch (error) {
+        console.error('Error starting new game:', error);
     }
 }
 
 function pauseGame() {
-    if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
+    if (game?.scene?.scenes[0]) {
         game.scene.scenes[0].pauseGame();
     } else {
         gameRunning = false;
@@ -755,7 +897,7 @@ function pauseGame() {
 }
 
 function resumeGame() {
-    if (game && game.scene && game.scene.scenes && game.scene.scenes[0]) {
+    if (game?.scene?.scenes[0]) {
         game.scene.scenes[0].resumeGame();
     } else {
         gameRunning = true;
@@ -773,9 +915,8 @@ function checkHighscore(score) {
 }
 
 function saveHighscore(name, score, level) {
-    console.log(`Sparar highscore i arrayen: ${name}, ${score}, ${level}`);
+    console.log(`Saving highscore: ${name}, ${score}, ${level}`);
     
-    // Lägg till den nya poängen
     highscores.push({
         name: name,
         score: score,
@@ -783,23 +924,19 @@ function saveHighscore(name, score, level) {
         date: new Date().toISOString().split('T')[0]
     });
     
-    // Sortera highscores i fallande ordning
     highscores.sort((a, b) => b.score - a.score);
     
-    // Begränsa till MAX_HIGHSCORES
     if (highscores.length > MAX_HIGHSCORES) {
         highscores = highscores.slice(0, MAX_HIGHSCORES);
     }
     
-    // Spara till localStorage
     try {
         saveHighscores(highscores);
-        console.log("Sparade highscores till localStorage:", highscores);
+        console.log("Saved highscores to localStorage:", highscores);
     } catch (error) {
-        console.error("Fel vid sparande av highscores:", error);
+        console.error("Error saving highscores:", error);
     }
     
-    // Återställ newHighscore-flaggan
     newHighscore = false;
 }
 
@@ -858,7 +995,7 @@ function showHighscoreScreen() {
     const clearHighscoresButton = document.getElementById('clear-highscores-button');
     
     if (newHighscore) {
-        console.log("Visar formulär för nytt highscore");
+        console.log("Showing form for new highscore");
         if (nameInputContainer) {
             nameInputContainer.classList.remove('hidden');
             nameInputContainer.style.display = 'block';
