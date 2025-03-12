@@ -17,20 +17,44 @@
     <div id="game-container">
         <div class="game-border"></div>
         <div id="ui-overlay" class="hidden">
-            Ljusstyrka: <span id="light-level">100</span>%<br>
-            Kristaller: <span id="crystals-collected">0</span>/<span id="total-crystals">5</span><br>
-            Poäng: <span id="score">0</span> | Nivå: <span id="level">1</span><br>
+            <div class="game-stat">
+                <span>Ljusstyrka:</span>
+                <span id="light-level">100</span>%
+            </div>
+            
+            <div class="game-stat">
+                <span>Kristaller:</span>
+                <span>
+                    <span id="crystals-collected">0</span>/<span id="total-crystals">5</span>
+                </span>
+            </div>
+            
+            <div class="game-stat">
+                <span>Poäng:</span>
+                <span id="score">0</span>
+            </div>
+            
+            <div class="game-stat">
+                <span>Nivå:</span>
+                <span id="level">1</span>
+            </div>
+            
             <div class="stamina-container">
                 <div id="stamina-bar"></div>
+                <div class="stamina-label">Stamina</div>
             </div>
-            <button id="toggle-light-button" class="touch-button">Växla ljus</button>
-            <button id="flashlight-button" class="touch-button">Ficklampa</button>
-            <button id="easter-egg-button" class="touch-button">Hemlighet</button>
+            
+            <div class="button-container" style="display: flex; gap: 5px; margin-top: 10px;">
+                <button id="toggle-light-button" class="touch-button">Växla ljus</button>
+                <button id="flashlight-button" class="touch-button">Ficklampa</button>
+                <button id="easter-egg-button" class="touch-button">Hemlighet</button>
+            </div>
         </div>
         
-        <div id="instructions" class="hidden">
-            WASD/Piltangenter eller svep = Förflytta dig | Mellanslag eller knapp = Växla ljus | Skift = Springa | F eller knapp = Ficklampa | E eller knapp = Hemlighet (nivå 1)
-        </div>
+       
+<div id="instructions" class="hidden">
+    WASD/Piltangenter eller svep = Förflytta dig | Mellanslag eller knapp = Växla ljus | Skift = Springa | F eller knapp = Ficklampa
+</div>
         
         <div id="message-overlay" class="hidden">
             <div id="message-text"></div>
@@ -171,5 +195,61 @@
     <script src="js/enemy.js"></script>
     <script src="js/game.js"></script>
     <script src="js/touch.js"></script>
+    <script>
+        (function() {
+        // Intercept CSS file requests
+            const originalCreateElement = document.createElement;
+        
+        document.createElement = function(tagName) {
+            const element = originalCreateElement.call(document, tagName);
+            
+            // If creating a link element (CSS), watch for touch-controls.css
+            if (tagName.toLowerCase() === 'link') {
+                const originalSetAttribute = element.setAttribute;
+                
+                element.setAttribute = function(name, value) {
+                    // If trying to set href to touch-controls.css, replace with inline styles
+                    if (name === 'href' && value && value.includes('touch-controls.css')) {
+                        console.log('Prevented loading of non-existent touch-controls.css');
+                        
+                        // Instead of loading the file, add the styles inline
+                        const style = document.createElement('style');
+                        style.textContent = `
+                            /* Touch controls styles */
+                            .touch-button {
+                                position: fixed;
+                                padding: 15px 25px;
+                                background: rgba(20, 40, 80, 0.7);
+                                color: white;
+                                border: 2px solid rgba(100, 200, 255, 0.6);
+                                border-radius: 50px;
+                                font-size: 16px;
+                                font-weight: bold;
+                                cursor: pointer;
+                                z-index: 1001;
+                                box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+                                transition: all 0.2s ease;
+                            }
+                            
+                            .touch-button:active, .touch-button.active {
+                                background-color: rgba(100, 200, 255, 0.7);
+                                box-shadow: 0 0 20px rgba(100, 200, 255, 0.8);
+                                transform: scale(1.1);
+                            }
+                            
+                            /* Add other touch control styles as needed */
+                        `;
+                        document.head.appendChild(style);
+                        return;
+                    }
+                    
+                    return originalSetAttribute.call(this, name, value);
+                };
+            }
+            
+            return element;
+        };
+    })();
+    </script>
    </body>
 </html>

@@ -223,15 +223,14 @@ class Enemy {
     updateSprite() {
         const player = this.scene.player;
         
-        // Beräkna avstånd till spelaren för att avgöra synlighet
+        // Beräkna avstånd till spelaren
         const distanceToPlayer = calculateDistance(
             this.x, this.y,
             player.x + player.radius, player.y + player.radius
         );
         
-        // Kontrollera om fienden är inom ljusradien
-        const isInLight = distanceToPlayer <= player.lightRadius;
-        const visibilityFactor = isInLight ? 1 : 0;
+        // Kontrollera om fienden är inom ljusradien - ÄNDRINGAR HÄR
+        const isInLight = distanceToPlayer <= player.lightRadius && player.lightProperties.isOn;
         
         // Uppdatera huvudposition
         const spriteX = this.x + this.shakeOffset.x;
@@ -241,10 +240,14 @@ class Enemy {
         this.eyesContainer.setPosition(spriteX, spriteY);
         this.stunEffect.setPosition(this.x, this.y);
         
-        // Sätt synlighet baserat på om fienden är i ljuset
-        this.sprite.setAlpha(visibilityFactor);
-        this.eyesContainer.setAlpha(visibilityFactor);
-        this.stunEffect.setAlpha(this.stunned ? 0.5 * visibilityFactor : 0);
+        // Ändrad synlighetslogik: fiender syns alltid, men är tydligare i ljuset
+        // VIKTIGT: alltid minst 0.3 i alpha så fienden alltid syns något
+        const baseVisibility = 0.3;
+        const enhancedVisibility = isInLight ? 1.0 : baseVisibility;
+        
+        this.sprite.setAlpha(enhancedVisibility);
+        this.eyesContainer.setAlpha(enhancedVisibility);
+        this.stunEffect.setAlpha(this.stunned ? 0.5 * enhancedVisibility : 0);
         
         // Uppdatera färg baserat på skjutförberedelse
         const preparingColor = this.preparingToShoot ? 
@@ -383,24 +386,22 @@ class DarkProjectile {
     updateSprite() {
         const player = this.scene.player;
         
-        // Beräkna avstånd till spelaren för att avgöra synlighet
+        // Beräkna avstånd till spelaren
         const distanceToPlayer = calculateDistance(
             this.x, this.y,
             player.x + player.radius, player.y + player.radius
         );
         
-        
-        const isInLight = distanceToPlayer <= player.lightRadius;
-        const visibilityFactor = isInLight ? 1 : 0;
-        
+        // ÄNDRAD SYNLIGHETSLOGIK: Projektiler syns alltid till viss del
+        const isInLight = distanceToPlayer <= player.lightRadius && player.lightProperties.isOn;
+        const baseVisibility = 0.3;
+        const visibilityFactor = isInLight ? 1.0 : baseVisibility;
         
         const pulseEffect = 0.2 * Math.sin(this.age * 0.001) + 0.8;
-        
         
         this.sprite.setPosition(this.x, this.y);
         this.coreSprite.setPosition(this.x, this.y);
         this.auraSprite.setPosition(this.x, this.y);
-        
         
         this.sprite.setAlpha(visibilityFactor);
         this.coreSprite.setAlpha(visibilityFactor);
@@ -446,16 +447,16 @@ class ProjectileParticle {
             return true;
         }
         
-        
         const player = this.scene.player;
         const distanceToPlayer = calculateDistance(
             this.x, this.y,
             player.x + player.radius, player.y + player.radius
         );
         
-        // Kontrollera om partikeln är inom ljusradien
-        const isInLight = distanceToPlayer <= player.lightRadius;
-        const visibilityFactor = isInLight ? 1 : 0;
+        // ÄNDRAD SYNLIGHETSLOGIK: partiklar syns alltid något
+        const isInLight = distanceToPlayer <= player.lightRadius && player.lightProperties.isOn;
+        const baseVisibility = 0.2;
+        const visibilityFactor = isInLight ? 1.0 : baseVisibility;
         
         // Uppdatera grafik
         this.sprite.setPosition(this.x, this.y);

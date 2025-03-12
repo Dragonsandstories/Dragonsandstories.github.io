@@ -267,8 +267,73 @@ class Player {
             
             // Handle blinking animation
             this._updateBlinking(time);
+            
+            // Update all particle effects
+            this._updateParticles(delta);
         } catch (error) {
             console.error("Error in player update:", error);
+        }
+    }
+
+    /**
+     * Updates all particle effects
+     * @private
+     */
+    _updateParticles(delta) {
+        try {
+            // Update dust particles
+            for (let i = this.dustParticles.length - 1; i >= 0; i--) {
+                const particle = this.dustParticles[i];
+                particle.life -= particle.decay * (delta / 16);
+                
+                if (particle.life <= 0) {
+                    particle.sprite.destroy();
+                    this.dustParticles.splice(i, 1);
+                } else {
+                    particle.sprite.setAlpha(particle.life * 0.5);
+                    
+                    // If particle has velocity, update position
+                    if (particle.vx !== undefined && particle.vy !== undefined) {
+                        particle.sprite.x += particle.vx * (delta / 16);
+                        particle.sprite.y += particle.vy * (delta / 16);
+                    }
+                }
+            }
+            
+            // Update sprint trail
+            for (let i = this.sprintTrail.length - 1; i >= 0; i--) {
+                const particle = this.sprintTrail[i];
+                particle.life -= particle.decay * (delta / 16);
+                
+                if (particle.life <= 0) {
+                    particle.sprite.destroy();
+                    this.sprintTrail.splice(i, 1);
+                } else {
+                    particle.sprite.setAlpha(particle.life * 0.3);
+                    particle.sprite.setRadius(particle.size * particle.life);
+                }
+            }
+            
+            // Update exhaustion particles
+            for (let i = this.exhaustionParticles.length - 1; i >= 0; i--) {
+                const particle = this.exhaustionParticles[i];
+                particle.life -= particle.decay * (delta / 16);
+                
+                if (particle.life <= 0) {
+                    particle.sprite.destroy();
+                    this.exhaustionParticles.splice(i, 1);
+                } else {
+                    // Update position to oscillate around player
+                    const osc = Math.sin(particle.life * 10 * particle.oscSpeed) * 5;
+                    const distance = particle.distance + osc;
+                    
+                    particle.sprite.x = this.x + this.radius + Math.cos(particle.angle) * distance;
+                    particle.sprite.y = this.y + this.radius + Math.sin(particle.angle) * distance;
+                    particle.sprite.setAlpha(particle.life * 0.7);
+                }
+            }
+        } catch (error) {
+            console.error("Error updating particles:", error);
         }
     }
 
@@ -508,18 +573,7 @@ class Player {
                 }
             }
             
-            // Update dust particles (fade out)
-            for (let i = this.dustParticles.length - 1; i >= 0; i--) {
-                const particle = this.dustParticles[i];
-                particle.life -= particle.decay;
-                
-                if (particle.life <= 0) {
-                    particle.sprite.destroy();
-                    this.dustParticles.splice(i, 1);
-                } else {
-                    particle.sprite.setAlpha(particle.life * 0.5);
-                }
-            }
+            // Removed duplicate particle update code - now handled in _updateParticles
         } catch (error) {
             console.error("Error creating dust effect:", error);
         }
@@ -556,19 +610,7 @@ class Player {
                 }
             }
             
-            // Update sprint trail particles (fade out and shrink)
-            for (let i = this.sprintTrail.length - 1; i >= 0; i--) {
-                const particle = this.sprintTrail[i];
-                particle.life -= particle.decay;
-                
-                if (particle.life <= 0) {
-                    particle.sprite.destroy();
-                    this.sprintTrail.splice(i, 1);
-                } else {
-                    particle.sprite.setAlpha(particle.life * 0.3);
-                    particle.sprite.setRadius(particle.size * particle.life);
-                }
-            }
+            // Removed duplicate particle update code - now handled in _updateParticles
         } catch (error) {
             console.error("Error creating sprint trail effect:", error);
         }
@@ -600,34 +642,7 @@ class Player {
                 });
             }
             
-            // Update exhaustion particles
-            const updateExhaustion = () => {
-                for (let i = this.exhaustionParticles.length - 1; i >= 0; i--) {
-                    const particle = this.exhaustionParticles[i];
-                    particle.life -= particle.decay;
-                    
-                    if (particle.life <= 0) {
-                        particle.sprite.destroy();
-                        this.exhaustionParticles.splice(i, 1);
-                    } else {
-                        // Update position to oscillate around player
-                        const osc = Math.sin(particle.life * 10 * particle.oscSpeed) * 5;
-                        const distance = particle.distance + osc;
-                        
-                        particle.sprite.x = this.x + this.radius + Math.cos(particle.angle) * distance;
-                        particle.sprite.y = this.y + this.radius + Math.sin(particle.angle) * distance;
-                        particle.sprite.setAlpha(particle.life * 0.7);
-                    }
-                }
-                
-                // Continue updating if particles remain
-                if (this.exhaustionParticles.length > 0) {
-                    requestAnimationFrame(updateExhaustion);
-                }
-            };
-            
-            // Start update loop
-            updateExhaustion();
+            // Removed manual update loop - now handled in _updateParticles
         } catch (error) {
             console.error("Error creating exhaustion effect:", error);
         }
